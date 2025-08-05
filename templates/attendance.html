@@ -1,0 +1,105 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Staff Attendance</h2>
+        <span class="text-muted">📅 Date: {{ today }}</span>
+    </div>
+
+    <table class="table table-striped table-hover align-middle">
+        <thead class="table-light">
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">Staff Name</th>
+                <th scope="col">Check In Time</th>
+                <th scope="col">Check Out Time</th>
+                <th scope="col" class="text-center">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in staff %}
+            <tr>
+                <th scope="row">{{ loop.index }}</th>
+                <td>{{ s[1] }}</td>
+                <td>
+                    {% if staff_status[s[0]][0] %}
+                        <span class="badge bg-success">{{ staff_status[s[0]][0] }}</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Not Checked In</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if staff_status[s[0]][1] %}
+                        <span class="badge bg-danger">{{ staff_status[s[0]][1] }}</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Not Checked Out</span>
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    <div class="d-flex justify-content-center gap-2">
+                        {% if not staff_status[s[0]][0] %}
+                        <form method="POST" action="{{ url_for('check', staff_id=s[0], action='in') }}">
+                            <button type="submit" class="btn btn-success btn-sm">Check In</button>
+                        </form>
+                        {% endif %}
+                        {% if not staff_status[s[0]][1] %}
+                        <form method="POST" action="{{ url_for('check', staff_id=s[0], action='out') }}">
+                            <button type="submit" class="btn btn-danger btn-sm">Check Out</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<button id="scan-qr-btn" class="btn btn-primary">Scan QR & Check In</button>
+
+<script>
+async function scanQR() {
+  // Replace this with your real QR scanning code or plugin
+  return "STAFF123";  // Example staff QR code data
+}
+
+document.getElementById('scan-qr-btn').onclick = async function() {
+  const btn = this;
+  btn.disabled = true;
+  try {
+    const qrData = await scanQR();
+
+    if (!navigator.geolocation) {
+      alert("Geolocation not supported.");
+      btn.disabled = false;
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(async function(position) {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+
+      const response = await fetch('/check_in', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ qr_data: qrData, lat, lng })
+      });
+
+      const result = await response.json();
+
+      alert(result.message);
+      btn.disabled = false;
+    }, function(error) {
+      alert("Please allow location access to check in.");
+      btn.disabled = false;
+    });
+
+  } catch (err) {
+    alert("Failed to scan QR: " + err);
+    btn.disabled = false;
+  }
+};
+</script>
+
+{% endblock %}
